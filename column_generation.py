@@ -205,7 +205,7 @@ print ("The program ends at " + str(datetime.datetime.now()) + ".")
 
 # Store the results into a pkl-date
 import pickle
-filename = "results_column_generation_"+str(number_houses)+"_buildings_"+str(number_clusters)+"_typtage_"+str(iteration)+"_iteration"+".pkl"
+filename = "results//results_column_generation_"+str(number_houses)+"_buildings_"+str(number_clusters)+"_typtage_"+str(iteration)+"_iteration"+".pkl"
 with open(filename, "wb") as f_in:
     pickle.dump(opti_res, f_in, pickle.HIGHEST_PROTOCOL)
     pickle.dump(eco, f_in, pickle.HIGHEST_PROTOCOL)
