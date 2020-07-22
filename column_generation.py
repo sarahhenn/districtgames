@@ -7,8 +7,8 @@ Run file for hierarchical district control
 
 from __future__ import division
 
-import object_subproblem
-import object_masterproblem
+import python.object_subproblem as object_subproblem
+import python.object_masterproblem as object_masterproblem
 import python.parse_inputs as parse_inputs
 import python.clustering_medoid as clustering
 import numpy as np
@@ -54,6 +54,9 @@ for n in range(number_houses):
     sh[n] = np.loadtxt("raw_inputs/heat_"+houses[n]+".csv")
     raw_inputs[n] = {"electricity": np.loadtxt("raw_inputs/elec_"+houses[n]+".csv") / 1000,
                      "heat": (dhw[n] + sh[n]) / 1000}
+    
+
+nodes = parse_inputs.read_demands("testnodes.txt")
 
 # Clustering
 
@@ -77,7 +80,6 @@ clustered = {}
 for n in range(number_houses):
     clustered[n] = {"electricity":      inputs[2*n],
                     "heat":             inputs[2*n+1],
-                    "design_heat_load": design_heat_loads[houses[n]],
                     "temperature":      inputs[-1],
                     "solar_irrad":      inputs[-2],
                     "weights":          nc}
@@ -96,19 +98,11 @@ for n in range(number_houses):
 
 par = parse_inputs.compute_parameters(par, number_clusters, len_day)
 
+housedevs = parse_inputs.read_housedevs()
+
 days = range(number_clusters)
 dt = par["dt"]
 times = range(24)
-
-# Set economic parameters
-#eco["sub_chp"] = 2 * eco["sub_chp"] # Reduce or add the subsidy for chp
-#
-#dev = ["bat","pv","eh","stc","hp","chp","boiler","tes"]
-#
-#for n in range(number_houses):
-#    for i in dev:
-#        devs[n][i]["c_inv_fix"] = devs[n][i]["c_inv_fix"] * 1
-#        devs[n][i]["c_inv_var"] = devs[n][i]["c_inv_var"] * 1
 
 # Subproblem Object
 for n in range(len(houses)):
@@ -221,18 +215,3 @@ with open(filename, "wb") as f_in:
     pickle.dump(res_costs, f_in, pickle.HIGHEST_PROTOCOL)
     pickle.dump(lambda_house, f_in, pickle.HIGHEST_PROTOCOL)
     pickle.dump(res_proposals, f_in, pickle.HIGHEST_PROTOCOL)
-
-# Retrieve optimal schedules from each house:
-#x_hp = np.zeros((timesteps, len(hp_nom)))
-#P_hp = np.zeros((timesteps, len(hp_nom)))
-#for i in xrange(len(hp_nom)):
-#    (temp_x, temp_y, temp_T, temp_P) = hp[i].get_optimal_schedule(lambda_hp[:,i])
-#    x_hp[:,i] = temp_x
-#    P_hp[:,i] = temp_P
-
-#x_chp = np.zeros((timesteps, len(chp_nom)))    
-#P_chp = np.zeros((timesteps, len(chp_nom)))
-#for j in xrange(len(chp_nom)):
-#    (temp_x, temp_y, temp_T, temp_P, temp_Q) = chp[j].get_optimal_schedule(lambda_chp[:,j])
-#    x_chp[:,j] = temp_x
-#    P_chp[:,j] = temp_P

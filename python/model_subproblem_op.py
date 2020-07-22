@@ -42,7 +42,6 @@ def compute(pass_house, marginals, eco, devs, demands, params):
         - stc :
         - tes :
     demands : dict
-        - design_heat_load : 
         - electricity : 
         - heat : 
         - solar_irrad : 

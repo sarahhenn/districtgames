@@ -1,0 +1,21 @@
+Network information 
+------------------------------
+
+Total annualized network costs [kEUR]: 28.3
+
+Pipes
+---------------
+Total network length [m]:          1345.92
+Weighted mean diameter [mm]:       94.26
+Minimum diameter [mm]:             55.4
+Maximum diameter [mm]:             141.0
+Total pipe volume [m^3]:           10.34
+Total kA-value [kW/K]:             3.66
+Annualized pipe investment [kEUR]: 27.56
+
+Pumps
+---------------
+Total electric capacity [kW]:          9.32
+Total annual electricity demand [MWh]: 10.44
+Annualized pump investment [kEUR]:     0.74
+

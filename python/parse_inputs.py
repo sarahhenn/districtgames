@@ -10,6 +10,7 @@ from __future__ import division
 import xlrd
 import numpy as np
 import scipy.stats as stats
+import pandas as pd
 
 def read_economics(devices, filename="further_parameters.xlsx"):
     """
@@ -104,9 +105,64 @@ def compute_parameters(par, number_clusters, len_day):
     par["dt"] = 24 / len_day
     
     return par
-    
-    
 
+def read_demands(name_nodefile = "nodes.txt"):
+        
+    # Define path for use case input data
+    path_file = "D:\\git\\districtgames" 
+    path_input = path_file + "\\raw_inputs\\bedburg\\"
+    path_nodes = path_input + name_nodefile
+    path_demands = path_input + "demands\\"
+      
+    
+    # load node data 
+    names = np.genfromtxt(open(path_nodes, "rb"),dtype = 'str', delimiter = ",", usecols=(0))           # --,       node names
+            
+    # Fill node-dict
+    nodes = {}
+    for index in range(len(names)):
+        
+       nodes[index] = {
+                        "number": index,
+                        "name": names[index],
+                        "heat": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_heatDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1)),      # W, heating demand
+                        "cool": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_coolingDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1)),      # W, cooling demand                                                                                    # °C, heating return temperature
+                        "elec": np.loadtxt(open(path_demands + "elecLoadC" + names[index] + ".csv", "rb"),delimiter = ",",skiprows = 1, usecols=(1)),       # W, electricity demand                  
+                        "dhw": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_dhwDemand.txt", "rb"),delimiter = ",",skiprows = 2, usecols=(1)), # W, drinking hot water demand
+                        }       
+    
+    print("Total heat: " + str(np.round(max(sum(nodes[n]["heat"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["heat"] for n in nodes))/1000/1000, 2)) + " MWh")
+    print("Total cool: " + str(np.round(max(sum(nodes[n]["cool"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["cool"] for n in nodes))/1000/1000, 2)) + " MWh")
+    print("Total dhw: " + str(np.round(max(sum(nodes[n]["dhw"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["dhw"] for n in nodes))/1000/1000, 2)) + " MWh")
+    print("Total elec: " + str(np.round(max(sum(nodes[n]["elec"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["elec"] for n in nodes))/1000/1000, 2)) + " MWh")
+    
+    # Check small demand values
+    for n in nodes:
+        for t in range(8760):
+            if nodes[n]["heat"][t] < 0.01:
+                nodes[n]["heat"][t] = 0
+            if nodes[n]["cool"][t] < 0.01:
+                nodes[n]["cool"][t] = 0   
+            if nodes[n]["dhw"][t] < 0.01:
+                nodes[n]["dhw"][t] = 0
+            if nodes[n]["elec"][t] < 0.01:
+                nodes[n]["elec"][t] = 0    
+                
+    return nodes
+    
+def read_housedevs(filename="housedevs.xlsx"):
+    
+    """
+    Read device capacities per house.
+    Extract list of devices.
+    
+    """
+    
+    housedevs = pd.read_excel(filename, index_col=0)
+#    devs = list(housedevs)
+    
+    return housedevs
+    
 def read_devices(timesteps, days, 
                  temperature_ambient, temperature_flow, temperature_design,
                  solar_irradiation,

@@ -8,7 +8,7 @@ Created on Mon Dec 21 15:38:47 2015
 
 from __future__ import division
 import numpy as np
-import model_subproblem_op
+import python.model_subproblem_op as model_subproblem_op
 
 class house(object):
     """

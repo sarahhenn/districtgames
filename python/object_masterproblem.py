@@ -9,7 +9,7 @@ Created on Mon Dec 21 15:38:47 2015
 # http://en.wikipedia.org/wiki/Branch_and_price
 
 import numpy as np
-import model_masterproblem_op
+import python.model_masterproblem_op as model_masterproblem_op
 
 class Master(object):
     """
