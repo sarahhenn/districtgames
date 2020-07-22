@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """
+Created on Mon Dec 21 15:38:47 2015
 
+@author: tsz-xhu
 """
 
 
 # http://en.wikipedia.org/wiki/Branch_and_price
 
 import numpy as np
-import model_masterproblem_test_2
+import model_masterproblem_op
 
 class Master(object):
     """
@@ -87,7 +89,7 @@ class Master(object):
             #if self.count_iteration > 1:
                # self.update_bounds()
             
-        (r_obj, r) = model_masterproblem_test_2.optimize(self, False) 
+        (r_obj, r) = model_masterproblem_op.optimize(self, False) 
         self.marginals["pi"].append(r["pi"])
         
         for j in range(len(houses)):        
@@ -113,7 +115,7 @@ class Master(object):
         Finalize the Branch&Price process by solving the masterproblem with 
             binaries instead of continuous variables
         """
-        (r_obj, r) = model_masterproblem_test_2.optimize(self, True, max_time)
+        (r_obj, r) = model_masterproblem_op.optimize(self, True, max_time)
         
         return (r_obj, r)
 #    

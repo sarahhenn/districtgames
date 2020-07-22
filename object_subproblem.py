@@ -8,7 +8,7 @@ Created on Mon Dec 21 15:38:47 2015
 
 from __future__ import division
 import numpy as np
-import model_subproblem_test_2
+import model_subproblem_op
 
 class house(object):
     """
@@ -65,7 +65,7 @@ class house(object):
             self.houses = houses
             opti_res = {}
            
-            opti_res = model_subproblem_test_2.compute(houses, marginals, eco, devs, clustered, params)
+            opti_res = model_subproblem_op.compute(houses, marginals, eco, devs, clustered, params)
         
         (res_y, res_energy, res_power, res_heat, res_soc, res_p_imp,
          res_p_ch, res_p_dch, res_p_use, res_p_sell, res_cap,

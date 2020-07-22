@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Feb 19 16:54:29 2016
+Run file for hierarchical district control
 
-@author: tsz-xhu
+@author: Sarah Henn, based on Thomas Schütz, Xiaolin Hu
 """
 
 from __future__ import division
 
 import object_subproblem
 import object_masterproblem
-import parse_inputs
-import clustering_medoid as clustering
+import python.parse_inputs as parse_inputs
+import python.clustering_medoid as clustering
 import numpy as np
 import datetime
 """
@@ -136,7 +136,7 @@ res_marginals.append(r["pi"])
 
 it_counter = 0 # Iteration counter
 
-iteration = 100 # Determine the number of iterations
+iteration = 2 # Determine the number of iterations
 
 opti_res = {}
 
@@ -186,11 +186,6 @@ while it_counter < iteration:
     datetime.datetime.now()
     time_interval = datetime.datetime.now() - time_begin
     time["time_interval_"+str(it_counter)] = time_interval.seconds
-
-
-
-
-
 
 
 # Solve masterproblem with binary restrictions
