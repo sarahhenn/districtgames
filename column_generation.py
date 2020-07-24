@@ -39,7 +39,7 @@ houses = []
 for n in range(int(len(splitLine)/2)):
     houses.append(splitLine[2*n])
 
-house = []
+
 
 number_houses = len(houses)
 
@@ -55,8 +55,15 @@ for n in range(number_houses):
     raw_inputs[n] = {"electricity": np.loadtxt("raw_inputs/elec_"+houses[n]+".csv") / 1000,
                      "heat": (dhw[n] + sh[n]) / 1000}
     
+# load list of buildings, load demands per building
+    
+#nodes,names = parse_inputs.read_demands("testnodes.txt")
+nodes, houses = parse_inputs.read_testdemands("testnodes.txt")
 
-nodes = parse_inputs.read_demands("testnodes.txt")
+#number_houses = len(houses)
+
+# load devs per building
+housedevs = parse_inputs.read_housedevs()
 
 # Clustering
 
@@ -98,13 +105,14 @@ for n in range(number_houses):
 
 par = parse_inputs.compute_parameters(par, number_clusters, len_day)
 
-housedevs = parse_inputs.read_housedevs()
-
 days = range(number_clusters)
 dt = par["dt"]
 times = range(24)
 
+
 # Subproblem Object
+house = []
+
 for n in range(len(houses)):
     house.append(object_subproblem.house(par, eco, devs, houses))
 
@@ -157,7 +165,7 @@ while it_counter < iteration:
         marginals = {}        
         marginals["sigma"] = r["sigma"][n]
         marginals["pi"] = r["pi"]
-        opti_res[it_counter][n] = house[n].compute_proposal(houses, marginals, eco, devs[n], clustered[n], par)      
+        opti_res[it_counter][n] = house[n].compute_proposal(houses, marginals, eco, devs[n], clustered[n], par, housedevs.iloc[n])      
         costs.append(opti_res[it_counter][n][26])
         res_costs[it_counter].append(opti_res[it_counter][n][21])
         proposals["chp"].append(opti_res[it_counter][n][22]["chp"])

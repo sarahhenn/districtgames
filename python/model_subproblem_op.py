@@ -13,7 +13,7 @@ import gurobipy as gp
 import numpy as np
 import datetime
 
-def compute(pass_house, marginals, eco, devs, demands, params):
+def compute(pass_house, marginals, eco, devs, demands, params, housedev):
     """
     Parameters
     ----------
@@ -149,19 +149,11 @@ def compute(pass_house, marginals, eco, devs, demands, params):
                                                    name="P_sell_"+dev+timetag)
 
         # Existing parameters
-        # TODO: import from extern
         
         # Variables for determining the variable costs (based on capacity)
         capacity = {}
-        capacity["bat"] = 10.0
-        capacity["boiler"] = 0.0
-        capacity["chp"] = 0.0
-        capacity["eh"] =  5.0  
-        capacity["hp"] =  5.0  
-        capacity["pv"] =  30.0    # in m2
-        capacity["inv"] =  20.0    
-        capacity["stc"] = 0.0     # in m2
-        capacity["tes"] = 300.0   # in m3
+        for i in housedev.keys():
+            capacity[i] = housedev[i]
         
         x = {}
         for dev in device:
@@ -207,8 +199,7 @@ def compute(pass_house, marginals, eco, devs, demands, params):
         for d in days:
             for t in time_steps:
                 for dev in heater:
-                    model.addConstr(capacity[dev] >= heat_nom[dev,d,t],
-                                    name="Capacity_"+dev+"_"+str(d)+"_"+str(t))
+                    model.addConstr(heat_nom[dev,d,t] <= capacity[dev])
         
         # Economic constraints
 
@@ -315,7 +306,7 @@ def compute(pass_house, marginals, eco, devs, demands, params):
                 for t in time_steps:
                     timetag = "_" + str(d) + "_" + str(t)
                     eta_th = devs[dev]["eta_th"][d][t]
-                    eta_el = devs["inv"]["eta"] * devs[dev]["eta_el"][d][t]
+                    eta_el = 0.97 * devs[dev]["eta_el"][d][t]
                     solar_irrad = demands["solar_irrad"][d][t]
 
                     model.addConstr(heat[dev,d,t] == 
@@ -357,11 +348,11 @@ def compute(pass_house, marginals, eco, devs, demands, params):
         for dev in storage:
             for d in days:
                 # Inits
-                model.addConstr(soc_nom[dev] >= soc_init[dev,d], 
+                model.addConstr(soc_init[dev,d] <= soc_nom[dev] , 
                                 name="SOC_nom_inits_"+dev+"_"+str(d))
                 for t in time_steps:
                     # Regular storage loads
-                    model.addConstr(soc_nom[dev] >= soc[dev,d,t],
+                    model.addConstr(soc[dev,d,t] <= soc_nom[dev] ,
                                     name="SOC_nom_"+dev+"_"+str(d)+"_"+str(t))
 
         dev = "bat"

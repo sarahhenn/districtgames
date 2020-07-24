@@ -52,7 +52,7 @@ class house(object):
         self.eco = eco
         self.houses = houses
         
-    def compute_proposal(self, houses, marginals, eco, devs, clustered, params, iteration=0, t_init=0):
+    def compute_proposal(self, houses, marginals, eco, devs, clustered, params, housedev, iteration=0, t_init=0):
         """
         This function computes a new proposal (P and k).
         Internally, the results of the subproblem are stored.
@@ -65,7 +65,7 @@ class house(object):
             self.houses = houses
             opti_res = {}
            
-            opti_res = model_subproblem_op.compute(houses, marginals, eco, devs, clustered, params)
+            opti_res = model_subproblem_op.compute(houses, marginals, eco, devs, clustered, params, housedev)
         
         (res_y, res_energy, res_power, res_heat, res_soc, res_p_imp,
          res_p_ch, res_p_dch, res_p_use, res_p_sell, res_cap,

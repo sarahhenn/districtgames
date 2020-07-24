@@ -131,10 +131,20 @@ def read_demands(name_nodefile = "nodes.txt"):
                         "dhw": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_dhwDemand.txt", "rb"),delimiter = ",",skiprows = 2, usecols=(1)), # W, drinking hot water demand
                         }       
     
+    for index in range(len(names)):
+        
+        temp = np.zeros(len(nodes[index]["heat"]))
+        
+        for i in range(len(nodes[index]["heat"])):
+            temp[i] = sum(nodes[index]["elec"][(4*i):(4*i+4)])/4  
+        
+        nodes[index]["elec"] = temp
+    
     print("Total heat: " + str(np.round(max(sum(nodes[n]["heat"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["heat"] for n in nodes))/1000/1000, 2)) + " MWh")
     print("Total cool: " + str(np.round(max(sum(nodes[n]["cool"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["cool"] for n in nodes))/1000/1000, 2)) + " MWh")
     print("Total dhw: " + str(np.round(max(sum(nodes[n]["dhw"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["dhw"] for n in nodes))/1000/1000, 2)) + " MWh")
     print("Total elec: " + str(np.round(max(sum(nodes[n]["elec"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["elec"] for n in nodes))/1000/1000, 2)) + " MWh")
+    
     
     # Check small demand values
     for n in nodes:
@@ -148,7 +158,65 @@ def read_demands(name_nodefile = "nodes.txt"):
             if nodes[n]["elec"][t] < 0.01:
                 nodes[n]["elec"][t] = 0    
                 
-    return nodes
+    names = names.tolist()
+                
+    return nodes, names
+
+def read_testdemands(name_nodefile = "nodes.txt"):
+        
+    # Define path for use case input data
+    path_file = "D:\\git\\districtgames" 
+    path_input = path_file + "\\raw_inputs\\bedburg\\"
+    path_nodes = path_input + name_nodefile
+    path_demands = path_input + "demands\\"
+      
+    
+    # load node data 
+    names = np.genfromtxt(open(path_nodes, "rb"),dtype = 'str', delimiter = ",", usecols=(0))           # --,       node names
+            
+    # Fill node-dict
+    nodes = {}
+    for index in range(len(names)):
+        
+       nodes[index] = {
+                        "number": index,
+                        "name": names[index],
+                        "heat": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_heatDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1), max_rows=120),      # W, heating demand
+                        "cool": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_coolingDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1), max_rows=120),      # W, cooling demand                                                                                    # °C, heating return temperature
+                        "elec": np.loadtxt(open(path_demands + "elecLoadC" + names[index] + ".csv", "rb"),delimiter = ",",skiprows = 1, usecols=(1), max_rows=120*4),       # W, electricity demand                  
+                        "dhw": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_dhwDemand.txt", "rb"),delimiter = ",",skiprows = 2, usecols=(1), max_rows=120), # W, drinking hot water demand
+                        }       
+    
+    for index in range(len(names)):
+        
+        temp = np.zeros(len(nodes[index]["heat"]))
+        
+        for i in range(len(nodes[index]["heat"])):
+            temp[i] = sum(nodes[index]["elec"][(4*i):(4*i+4)])/4  
+        
+        nodes[index]["elec"] = temp
+    
+    print("Total heat: " + str(np.round(max(sum(nodes[n]["heat"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["heat"] for n in nodes))/1000/1000, 2)) + " MWh")
+    print("Total cool: " + str(np.round(max(sum(nodes[n]["cool"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["cool"] for n in nodes))/1000/1000, 2)) + " MWh")
+    print("Total dhw: " + str(np.round(max(sum(nodes[n]["dhw"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["dhw"] for n in nodes))/1000/1000, 2)) + " MWh")
+    print("Total elec: " + str(np.round(max(sum(nodes[n]["elec"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["elec"] for n in nodes))/1000/1000, 2)) + " MWh")
+    
+    
+    # Check small demand values
+    for n in nodes:
+        for t in range(len(nodes[0]["heat"])):
+            if nodes[n]["heat"][t] < 0.01:
+                nodes[n]["heat"][t] = 0
+            if nodes[n]["cool"][t] < 0.01:
+                nodes[n]["cool"][t] = 0   
+            if nodes[n]["dhw"][t] < 0.01:
+                nodes[n]["dhw"][t] = 0
+            if nodes[n]["elec"][t] < 0.01:
+                nodes[n]["elec"][t] = 0    
+                
+    names = names.tolist()
+                
+    return nodes, names
     
 def read_housedevs(filename="housedevs.xlsx"):
     
@@ -158,7 +226,7 @@ def read_housedevs(filename="housedevs.xlsx"):
     
     """
     
-    housedevs = pd.read_excel(filename, index_col=0)
+    housedevs = pd.read_excel(filename, index_col=0, convert_float=False)
 #    devs = list(housedevs)
     
     return housedevs
