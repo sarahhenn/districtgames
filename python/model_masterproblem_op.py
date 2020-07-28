@@ -13,9 +13,9 @@ import numpy as np
 def optimize(mp, final_iteration=False, max_time=10):
 
     times = range(mp.params["time_steps"])
-    days = range(mp.params["days"])
+#    days = range(mp.params["days"])
 #    dev = ["bat","pv","eh","stc","hp","chp","boiler","tes"]
-    days_number = len(days)
+#    days_number = len(days)
     times_number = len(times)
     
     houses_number = len(mp.houses)  
@@ -28,7 +28,7 @@ def optimize(mp, final_iteration=False, max_time=10):
 
     if number_props["house"] == 0:             
         number_props["house"] = 1
-        prop["house"] = np.zeros((1,houses_number,days_number,times_number))
+        prop["house"] = np.zeros((1,houses_number,times_number))
         k = np.zeros((1,houses_number))
         
     else:
@@ -63,30 +63,28 @@ def optimize(mp, final_iteration=False, max_time=10):
                 for h in range(houses_number):
                     l["house"][p,h] = model.addVar(vtype="C", name="l_house_"+str(p)+"_"+str(h), lb=0.0, ub=1.0)            
      
-        for d in days:        
-            for t in times:
-                P_imp[d,t] = model.addVar(vtype="C", name="P_imp_"+str(d)+"_"+str(t), lb=0.0)
-                P_exp[d,t] = model.addVar(vtype="C", name="P_exp_"+str(d)+"_"+str(t), lb=0.0)
+        for t in times:
+            P_imp[t] = model.addVar(vtype="C", name="P_imp_"+str(t), lb=0.0)
+            P_exp[t] = model.addVar(vtype="C", name="P_exp_"+str(t), lb=0.0)
        
         # Integrate new variables into the model
         model.update()    
     
         # Set objective
         costs_electricity = (mp.eco["b"]["el"] * mp.eco["crf"] * k_el * dt * 
-                            sum(mp.weights[d] * sum(P_imp[d,t] for t in times) for d in days) - 
+                            sum(P_imp[t] for t in times) - 
                             mp.eco["b"]["eex"] * mp.eco["crf"] * r_el * dt * 
-                            sum(mp.weights[d] * sum(P_exp[d,t] for t in times) for d in days))
+                             sum(P_exp[t] for t in times))
         costs_others = sum(sum((k[p,h] * l["house"][p,h]) for p in range(number_props["house"])) for h in range(houses_number))        
 
         model.setObjective(costs_electricity + costs_others, gp.GRB.MINIMIZE)
         
         # Add constraints
         # Electricity balance:
-        for d in days:
-            for t in times:
-                house_proposal = sum(sum(prop["house"][p][h][d,t] * l["house"][p,h]
-                                     for p in range(number_props["house"])) for h in range(houses_number))
-                model.addConstr(P_imp[d,t] - P_exp[d,t] - house_proposal == 0, "ElectricityBalance_"+str(d)+"_"+str(t)) # - P_dem[d,t]
+        for t in times:
+            house_proposal = sum(sum(prop["house"][p][h][t] * l["house"][p,h]
+                                 for p in range(number_props["house"])) for h in range(houses_number))
+            model.addConstr(P_imp[t] - P_exp[t] - house_proposal == 0, "ElectricityBalance_"+str(t)) # - P_dem[d,t]
 
         # Convexity constraints
         for h in range(houses_number):
@@ -113,21 +111,20 @@ def optimize(mp, final_iteration=False, max_time=10):
             print("Current objective of the master problem: " + str(r_obj))
             
             if final_iteration:
-                r["imp"] = {(d,t) : P_imp[d,t].X for d in days for t in times}
-                r["exp"] = {(d,t) : P_exp[d,t].X for d in days for t in times}
+                r["imp"] = {(t) : P_imp[t].X for t in times}
+                r["exp"] = {(t) : P_exp[t].X for t in times}
                 r["house"] = np.zeros((number_props["house"], houses_number))        
                 for p in range(number_props["house"]):
                     for h in range(houses_number):
                         r["house"][p,h] = l["house"][p,h].X                      
             else:
-                r["pi"] = np.zeros((days_number, times_number))
+                r["pi"] = np.zeros(times_number)
                 r["sigma"] = np.zeros(houses_number)
-                r["imp"] = {(d,t) : P_imp[d,t].X for d in days for t in times}
-                r["exp"] = {(d,t) : P_exp[d,t].X for d in days for t in times}
-                            
-                for d in range(days_number):                
-                    for t in range(times_number):
-                        r["pi"][d,t] = (model.getConstrByName("ElectricityBalance_"+str(d)+"_"+str(t))).Pi #.getAttr("Pi")
+                r["imp"] = {(t) : P_imp[t].X for t in times}
+                r["exp"] = {(t) : P_exp[t].X for t in times}
+                                           
+                for t in range(times_number):
+                    r["pi"][t] = (model.getConstrByName("ElectricityBalance_"+str(t))).Pi #.getAttr("Pi")
                 for h in range(houses_number):
                     r["sigma"][h]  = (model.getConstrByName("Convex_house_"+str(h))).Pi #.getAttr("Pi")
             

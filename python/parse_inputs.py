@@ -86,7 +86,7 @@ def read_economics(devices, filename="further_parameters.xlsx"):
 
     return (eco, par, devices)
     
-def compute_parameters(par, number_clusters, len_day):
+def compute_parameters(par, len_day):
     """
     Add number of days, time steps per day and temporal discretization to par.
     
@@ -95,74 +95,17 @@ def compute_parameters(par, number_clusters, len_day):
     par : dictionary
         Dictionary which holds non-device-characteristic and non-economic 
         parameters.
-    number_clusters : integer
-        Number of allowed clusters.
+
     len_day : integer
         Time steps per day
     """
-    par["days"] = number_clusters
     par["time_steps"] = len_day
     par["dt"] = 24 / len_day
     
     return par
 
-def read_demands(name_nodefile = "nodes.txt"):
-        
-    # Define path for use case input data
-    path_file = "D:\\git\\districtgames" 
-    path_input = path_file + "\\raw_inputs\\bedburg\\"
-    path_nodes = path_input + name_nodefile
-    path_demands = path_input + "demands\\"
-      
-    
-    # load node data 
-    names = np.genfromtxt(open(path_nodes, "rb"),dtype = 'str', delimiter = ",", usecols=(0))           # --,       node names
-            
-    # Fill node-dict
-    nodes = {}
-    for index in range(len(names)):
-        
-       nodes[index] = {
-                        "number": index,
-                        "name": names[index],
-                        "heat": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_heatDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1)),      # W, heating demand
-                        "cool": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_coolingDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1)),      # W, cooling demand                                                                                    # °C, heating return temperature
-                        "elec": np.loadtxt(open(path_demands + "elecLoadC" + names[index] + ".csv", "rb"),delimiter = ",",skiprows = 1, usecols=(1)),       # W, electricity demand                  
-                        "dhw": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_dhwDemand.txt", "rb"),delimiter = ",",skiprows = 2, usecols=(1)), # W, drinking hot water demand
-                        }       
-    
-    for index in range(len(names)):
-        
-        temp = np.zeros(len(nodes[index]["heat"]))
-        
-        for i in range(len(nodes[index]["heat"])):
-            temp[i] = sum(nodes[index]["elec"][(4*i):(4*i+4)])/4  
-        
-        nodes[index]["elec"] = temp
-    
-    print("Total heat: " + str(np.round(max(sum(nodes[n]["heat"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["heat"] for n in nodes))/1000/1000, 2)) + " MWh")
-    print("Total cool: " + str(np.round(max(sum(nodes[n]["cool"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["cool"] for n in nodes))/1000/1000, 2)) + " MWh")
-    print("Total dhw: " + str(np.round(max(sum(nodes[n]["dhw"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["dhw"] for n in nodes))/1000/1000, 2)) + " MWh")
-    print("Total elec: " + str(np.round(max(sum(nodes[n]["elec"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["elec"] for n in nodes))/1000/1000, 2)) + " MWh")
-    
-    
-    # Check small demand values
-    for n in nodes:
-        for t in range(8760):
-            if nodes[n]["heat"][t] < 0.01:
-                nodes[n]["heat"][t] = 0
-            if nodes[n]["cool"][t] < 0.01:
-                nodes[n]["cool"][t] = 0   
-            if nodes[n]["dhw"][t] < 0.01:
-                nodes[n]["dhw"][t] = 0
-            if nodes[n]["elec"][t] < 0.01:
-                nodes[n]["elec"][t] = 0    
-                
-    names = names.tolist()
-                
-    return nodes, names
 
-def read_testdemands(name_nodefile = "nodes.txt"):
+def read_demands(name_nodefile = "nodes.txt", obs_period = 5, obs_houses = 5):
         
     # Define path for use case input data
     path_file = "D:\\git\\districtgames" 
@@ -172,7 +115,7 @@ def read_testdemands(name_nodefile = "nodes.txt"):
       
     
     # load node data 
-    names = np.genfromtxt(open(path_nodes, "rb"),dtype = 'str', delimiter = ",", usecols=(0))           # --,       node names
+    names = np.genfromtxt(open(path_nodes, "rb"),dtype = 'str', delimiter = ",", usecols=(0), max_rows=obs_houses)           # --,       node names
             
     # Fill node-dict
     nodes = {}
@@ -181,10 +124,10 @@ def read_testdemands(name_nodefile = "nodes.txt"):
        nodes[index] = {
                         "number": index,
                         "name": names[index],
-                        "heat": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_heatDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1), max_rows=120),      # W, heating demand
-                        "cool": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_coolingDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1), max_rows=120),      # W, cooling demand                                                                                    # °C, heating return temperature
-                        "elec": np.loadtxt(open(path_demands + "elecLoadC" + names[index] + ".csv", "rb"),delimiter = ",",skiprows = 1, usecols=(1), max_rows=120*4),       # W, electricity demand                  
-                        "dhw": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_dhwDemand.txt", "rb"),delimiter = ",",skiprows = 2, usecols=(1), max_rows=120), # W, drinking hot water demand
+                        "heat": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_heatDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1), max_rows=obs_period*24)/1000,      # W, heating demand
+                        "cool": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_coolingDemand.txt", "rb"),delimiter = ",",skiprows = 3, usecols=(1), max_rows=obs_period*24)/1000,      # W, cooling demand                                                                                    # °C, heating return temperature
+                        "elec": np.loadtxt(open(path_demands + "elecLoadC" + names[index] + ".csv", "rb"),delimiter = ",",skiprows = 1, usecols=(1), max_rows=obs_period*24*4)/1000,       # W, electricity demand                  
+                        "dhw": np.loadtxt(open(path_demands + "demand_ClusterC" + names[index] + "_dhwDemand.txt", "rb"),delimiter = ",",skiprows = 2, usecols=(1), max_rows=obs_period*24)/1000, # W, drinking hot water demand
                         }       
     
     for index in range(len(names)):
@@ -196,10 +139,10 @@ def read_testdemands(name_nodefile = "nodes.txt"):
         
         nodes[index]["elec"] = temp
     
-    print("Total heat: " + str(np.round(max(sum(nodes[n]["heat"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["heat"] for n in nodes))/1000/1000, 2)) + " MWh")
-    print("Total cool: " + str(np.round(max(sum(nodes[n]["cool"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["cool"] for n in nodes))/1000/1000, 2)) + " MWh")
-    print("Total dhw: " + str(np.round(max(sum(nodes[n]["dhw"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["dhw"] for n in nodes))/1000/1000, 2)) + " MWh")
-    print("Total elec: " + str(np.round(max(sum(nodes[n]["elec"] for n in nodes)/1000/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["elec"] for n in nodes))/1000/1000, 2)) + " MWh")
+    print("Total heat: " + str(np.round(max(sum(nodes[n]["heat"] for n in nodes)/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["heat"] for n in nodes))/1000, 2)) + " MWh")
+    print("Total cool: " + str(np.round(max(sum(nodes[n]["cool"] for n in nodes)/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["cool"] for n in nodes))/1000, 2)) + " MWh")
+    print("Total dhw: " + str(np.round(max(sum(nodes[n]["dhw"] for n in nodes)/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["dhw"] for n in nodes))/1000, 2)) + " MWh")
+    print("Total elec: " + str(np.round(max(sum(nodes[n]["elec"] for n in nodes)/1000), 3)) + " MW/ " + str(np.round(sum(sum(nodes[n]["elec"] for n in nodes))/1000, 2)) + " MWh")
     
     
     # Check small demand values
@@ -231,7 +174,7 @@ def read_housedevs(filename="housedevs.xlsx"):
     
     return housedevs
     
-def read_devices(timesteps, days, 
+def read_devices(timesteps, 
                  temperature_ambient, temperature_flow, temperature_design,
                  solar_irradiation,
                  filename="devices.xlsx"):
@@ -278,14 +221,14 @@ def read_devices(timesteps, days,
         # Read each sheet
         current_sheet = _read_sheet(book.sheet_by_name(dev), dev, timesteps)
         
-        results[dev] = _handle_sheet(current_sheet, dev, timesteps, days, 
+        results[dev] = _handle_sheet(current_sheet, dev, timesteps, 
                                      temperature_ambient, temperature_flow,
                                      temperature_design,
                                      solar_irradiation)
     
     return results
 
-def _handle_sheet(sheet, dev, timesteps, days,
+def _handle_sheet(sheet, dev, timesteps,
                   temperature_ambient, temperature_flow, temperature_design,
                   solar_irradiation):
     """
@@ -331,7 +274,7 @@ def _handle_sheet(sheet, dev, timesteps, days,
     # Define infinity
     infinity = np.inf
     
-    ones = np.ones((days, timesteps))
+    ones = np.ones(timesteps)
     
     keys = sheet.keys()
     
@@ -529,7 +472,7 @@ def _handle_sheet(sheet, dev, timesteps, days,
         eta_el   = eta_NOCT * (1 + results["gamma"] / 100 * 
                                (t_cell - results["t_NOCT"]))
         
-        results["eta_th"] = np.zeros((days, timesteps))
+        results["eta_th"] = np.zeros(timesteps)
         results["eta_el"] = eta_el
         
         results["c_inv_fix"] = 0
@@ -550,7 +493,7 @@ def _handle_sheet(sheet, dev, timesteps, days,
         first_order  = np.mean([sheet[i]["first_order"] for i in keys])
         second_order = np.mean([sheet[i]["second_order"] for i in keys])
         
-        results["eta_el"] = np.zeros((days, timesteps))
+        results["eta_el"] = np.zeros(timesteps)
         temp_diff = temperature_flow - temperature_ambient
         eta_th = (zero_loss - 
                   first_order / solar_irradiation * temp_diff - 
@@ -711,14 +654,14 @@ if __name__ == "__main__":
     timesteps = 24
     days = 5
     # Random temperatures between -10 and +20 degC:
-    temperature_ambient = np.random.rand(days, timesteps) * 30 - 10
+    temperature_ambient = np.random.rand(timesteps) * 30 - 10
     
     temperature_design = -12 # Aachen
     
-    solar_irradiation = np.random.rand(days, timesteps) * 800
+    solar_irradiation = np.random.rand(timesteps) * 800
     solar_irradiation
     
-    devs = read_devices(timesteps, days, temperature_ambient, 
+    devs = read_devices(timesteps, temperature_ambient, 
                         temperature_flow=35,
                         temperature_design=temperature_design,
                         solar_irradiation=solar_irradiation)

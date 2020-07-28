@@ -16,7 +16,7 @@ class Master(object):
     This is the Master class that handles all attributes relevant to the masterproblem
     """
     
-    def __init__(self, houses_number, params, houses, eco, P_demand, clustered):
+    def __init__(self, houses_number, params, houses, eco, P_demand, nodes):
         """
         Initialization parameters are:
             number_chp: Number of installed CHP units
@@ -35,7 +35,7 @@ class Master(object):
         self.bounds = {}
         self.marginals = {}
         self.marginals["sigma"] = {}
-        self.weights = clustered[0]["weights"]
+#        self.weights = clustered[0]["weights"]
         for n in range(len(houses)):
             self.marginals["sigma"][n] = []
         self.marginals["pi"] = []

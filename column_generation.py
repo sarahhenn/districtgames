@@ -10,120 +10,76 @@ from __future__ import division
 import python.object_subproblem as object_subproblem
 import python.object_masterproblem as object_masterproblem
 import python.parse_inputs as parse_inputs
-import python.clustering_medoid as clustering
 import numpy as np
 import datetime
 """
 Inputs: heat demand (includes space heating and dhw)
         electricity demand
         solar irradiation for PV and STC
-        design heat load
-        weights for typical days
         ambient temperature
 """
+
+#%% INPUT PARAMETERS
+
+# adjust the following values 
+obs_period = 10          # Observation period in days
+obs_houses = 113        # Number of buildings to be observed (max 113)
+iteration = 10          # Determine the number of iterations
+
+
+#%% 
+
 time = {}
 datetime.datetime.now()
 time["begin"] = datetime.datetime.now()
 print ("This program begin at " + str(datetime.datetime.now()) + ".")
 
-# Create lists with buildings
-    
-design_heat_loads = {}
-
-with open("design_heat_load.txt") as f:
-    for line in f:
-        splitLine = line.split()
-design_heat_loads = {splitLine[2*n] : int(splitLine[(2*n+1)]) / 1000 for n in range(int(len(splitLine)/2))} 
-
-houses = []
-for n in range(int(len(splitLine)/2)):
-    houses.append(splitLine[2*n])
-
-
-
-number_houses = len(houses)
-
-raw_inputs = {}
-raw_inputs["solar_irrad"] = np.loadtxt("raw_inputs/solar_rad_35deg.csv") / 1000
-raw_inputs["temperature"] = np.loadtxt("raw_inputs/temperature.csv")
-dhw = {}
-sh = {}
-
-for n in range(number_houses):
-    dhw[n] = np.loadtxt("raw_inputs/dhw_"+houses[n]+".csv")
-    sh[n] = np.loadtxt("raw_inputs/heat_"+houses[n]+".csv")
-    raw_inputs[n] = {"electricity": np.loadtxt("raw_inputs/elec_"+houses[n]+".csv") / 1000,
-                     "heat": (dhw[n] + sh[n]) / 1000}
+weather = {}
+weather["solar_irrad"] = np.loadtxt("raw_inputs/solar_rad_35deg.csv", max_rows=obs_period*24) / 1000
+weather["temperature"] = np.loadtxt("raw_inputs/temperature.csv", max_rows=obs_period*24)
     
 # load list of buildings, load demands per building
     
-#nodes,names = parse_inputs.read_demands("testnodes.txt")
-nodes, houses = parse_inputs.read_testdemands("testnodes.txt")
+nodes,houses = parse_inputs.read_demands("nodes.txt", obs_period, obs_houses)
 
-#number_houses = len(houses)
+fullhorizon = len(weather["temperature"])
+
+number_houses = len(houses)
 
 # load devs per building
 housedevs = parse_inputs.read_housedevs()
 
-# Clustering
-
-inputs_clustering = []
-for n in range(number_houses):
-    inputs_clustering.append(raw_inputs[n]["electricity"])
-    inputs_clustering.append(raw_inputs[n]["heat"])
-inputs_clustering.append(raw_inputs["solar_irrad"])
-inputs_clustering.append(raw_inputs["temperature"])
-
-number_clusters = 12 # Determine the number of type days
-
-(inputs, nc, z) = clustering.cluster(np.array(inputs_clustering),
-                                     number_clusters=number_clusters,
-                                     norm=2,
-                                     mip_gap=0.01)
-
-len_day = np.shape(inputs[0])[1] # Determine time steps per day
-
-clustered = {}
-for n in range(number_houses):
-    clustered[n] = {"electricity":      inputs[2*n],
-                    "heat":             inputs[2*n+1],
-                    "temperature":      inputs[-1],
-                    "solar_irrad":      inputs[-2],
-                    "weights":          nc}
-#clustered["z"]           = z
-
 # Read devices, economic date and other parameters
 devs = {}
 
-for n in range(number_houses):
-    devs[n] = parse_inputs.read_devices(timesteps=len_day, days=number_clusters,
-                         temperature_ambient=clustered[n]["temperature"],
+devs = parse_inputs.read_devices(timesteps=fullhorizon,
+                         temperature_ambient=weather["temperature"],
                          temperature_flow=35, 
                          temperature_design=-12, 
-                         solar_irradiation=clustered[n]["solar_irrad"])
-    (eco, par, devs[n]) = parse_inputs.read_economics(devs[n])
+                         solar_irradiation=weather["solar_irrad"])
 
-par = parse_inputs.compute_parameters(par, number_clusters, len_day)
+(eco, par, devs) = parse_inputs.read_economics(devs)
 
-days = range(number_clusters)
+par = parse_inputs.compute_parameters(par, fullhorizon)
+
+days = 1
 dt = par["dt"]
-times = range(24)
-
+#times = range(fullhorizon)
+times = range(120)
 
 # Subproblem Object
 house = []
 
 for n in range(len(houses)):
-    house.append(object_subproblem.house(par, eco, devs, houses))
+    house.append(object_subproblem.house(par, eco, devs, houses, nodes, housedevs, weather))
 
 # P_demand for all the buildings in each time step
 P_demand = {}
-for d in days:
-    for t in times:
-        P_demand[d,t] = sum(clustered[n]["electricity"][d,t] for n in range(number_houses))     
+for t in times:
+    P_demand[t] = sum(nodes[n]["elec"][t] for n in range(number_houses))     
 
 # Create masterproblem
-mp = object_masterproblem.Master(len(houses), par, houses, eco, P_demand, clustered)
+mp = object_masterproblem.Master(len(houses), par, houses, eco, P_demand, nodes)
 
 # Store results of masterproblem
 res_obj = []
@@ -137,8 +93,6 @@ res_obj.append(r_obj)
 res_marginals.append(r["pi"])
 
 it_counter = 0 # Iteration counter
-
-iteration = 2 # Determine the number of iterations
 
 opti_res = {}
 
@@ -165,7 +119,7 @@ while it_counter < iteration:
         marginals = {}        
         marginals["sigma"] = r["sigma"][n]
         marginals["pi"] = r["pi"]
-        opti_res[it_counter][n] = house[n].compute_proposal(houses, marginals, eco, devs[n], clustered[n], par, housedevs.iloc[n])      
+        opti_res[it_counter][n] = house[n].compute_proposal(houses, marginals, eco, devs, nodes[n], par, housedevs.iloc[n], weather)      
         costs.append(opti_res[it_counter][n][26])
         res_costs[it_counter].append(opti_res[it_counter][n][21])
         proposals["chp"].append(opti_res[it_counter][n][22]["chp"])
@@ -207,12 +161,12 @@ print ("The program ends at " + str(datetime.datetime.now()) + ".")
 
 # Store the results into a pkl-date
 import pickle
-filename = "results//results_column_generation_"+str(number_houses)+"_buildings_"+str(number_clusters)+"_typtage_"+str(iteration)+"_iteration"+".pkl"
+filename = "results//results_column_generation_"+str(number_houses)+"_buildings_"+"_typtage_"+str(iteration)+"_iteration"+".pkl"
 with open(filename, "wb") as f_in:
     pickle.dump(opti_res, f_in, pickle.HIGHEST_PROTOCOL)
     pickle.dump(eco, f_in, pickle.HIGHEST_PROTOCOL)
     pickle.dump(devs, f_in, pickle.HIGHEST_PROTOCOL)
-    pickle.dump(clustered, f_in, pickle.HIGHEST_PROTOCOL)
+    pickle.dump(nodes, f_in, pickle.HIGHEST_PROTOCOL)
     pickle.dump(par, f_in, pickle.HIGHEST_PROTOCOL)
     pickle.dump(res_marginals, f_in, pickle.HIGHEST_PROTOCOL)
     pickle.dump(res_obj, f_in, pickle.HIGHEST_PROTOCOL)
