@@ -22,9 +22,9 @@ Inputs: heat demand (includes space heating and dhw)
 #%% INPUT PARAMETERS
 
 # adjust the following values 
-obs_period = 10          # Observation period in days
-obs_houses = 113        # Number of buildings to be observed (max 113)
-iteration = 10          # Determine the number of iterations
+obs_period = 1          # Observation period in days
+obs_houses = 10        # Number of buildings to be observed (max 113)
+iteration = 2          # Determine the number of iterations
 
 
 #%% 
@@ -64,8 +64,8 @@ par = parse_inputs.compute_parameters(par, fullhorizon)
 
 days = 1
 dt = par["dt"]
-#times = range(fullhorizon)
-times = range(120)
+times = range(fullhorizon)
+#times = range(120)
 
 # Subproblem Object
 house = []
