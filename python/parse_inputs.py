@@ -100,7 +100,7 @@ def compute_parameters(par, len_day):
         Time steps per day
     """
     par["time_steps"] = len_day
-    par["dt"] = 24 / len_day
+    par["dt"] = 1
     
     return par
 
